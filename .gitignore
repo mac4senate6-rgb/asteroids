@@ -1,0 +1,12 @@
+# Python-generated cache files
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+.venv/
+
+# PyCharm project settings
+.idea/
+
+# Dynamic Log files
+*.jsonl
