@@ -2,6 +2,7 @@ import pygame
 import circleshape
 from constants import *
 from shot import Shot
+from logger import log_event
 
 
 class Player(circleshape.CircleShape):
@@ -61,6 +62,7 @@ class Player(circleshape.CircleShape):
         self.shoot_timer = PLAYER_SHOOT_COOLDOWN_SECONDS
 
         shot = Shot(self.position.x, self.position.y)
+        log_event("shot_fired")
         shot.velocity = pygame.Vector2(0, 1).rotate(self.rotation) * PLAYER_SHOOT_SPEED
 
 
