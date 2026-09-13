@@ -70,6 +70,11 @@ class Player(circleshape.CircleShape):
             self.shoot()
 
         self.position += self.velocity * dt
+        self.wrap_screen()
+
+    def wrap_screen(self) -> None:
+        self.position.x %= SCREEN_WIDTH
+        self.position.y %= SCREEN_HEIGHT
 
     def move(self, dt: float) -> None:
         forward = pygame.Vector2(0, 1).rotate(self.rotation)
