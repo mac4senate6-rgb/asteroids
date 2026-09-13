@@ -34,7 +34,7 @@ def main():
     asteroid_field = AsteroidField()
 
     score = 0
-
+    lives = PLAYER_STARTING_LIVES
     while True:
         log_state()
 
@@ -47,8 +47,17 @@ def main():
         for asteroid in asteroids:
             if player.collides_with(asteroid):
                 log_event("player_hit")
-                print("Game over!")
-                sys.exit()
+                lives -= 1
+                if lives <= 0:
+                    log_event("player_dead")
+                    print("Game over!")
+                    sys.exit()
+                else:
+                    player.position.x = SCREEN_WIDTH / 2
+                    player.position.y = SCREEN_HEIGHT / 2
+                    player.velocity = pygame.Vector2(0, 0)
+                    player.rotation = 0
+                    log_event("player_respawn")
         for asteroid in asteroids:
             for shot in shots:
                 if asteroid.collides_with(shot):
