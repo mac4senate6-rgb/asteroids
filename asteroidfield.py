@@ -6,6 +6,7 @@ from collections.abc import Callable
 
 import pygame
 
+from logger import log_event
 from asteroid import Asteroid
 from constants import *
 
@@ -37,24 +38,51 @@ class AsteroidField(pygame.sprite.Sprite):
         ),
     ]
 
-    def __init__(self) -> None:
+    def __init__(self, asteroid_group: pygame.sprite.Group) -> None:
         pygame.sprite.Sprite.__init__(self, self.containers)
-        self.spawn_timer = 0.0
+        self.asteroid_group = asteroid_group
+        self.wave_size = 4
+        self.wave_timer = 0.0
+        self.wave_delay = 2.0
+        self.speed_multiplier = 1.0
+        self.wave_number = 0
+
 
     def spawn(self, radius: float, position: pygame.Vector2, velocity: pygame.Vector2) -> None:
         asteroid = Asteroid(position.x, position.y, radius)
         asteroid.velocity = velocity
 
-    def update(self, dt: float) -> None:
-        self.spawn_timer += dt
-        if self.spawn_timer > ASTEROID_SPAWN_RATE_SECONDS:
-            self.spawn_timer = 0.0
+    def spawn_wave(self) -> None:
+        for _ in range(self.wave_size):
             edge = random.choice(self.edges)
+
             speed = random.randint(40, 100)
+            speed *= self.speed_multiplier
+
             velocity = edge[0] * speed
             velocity = velocity.rotate(random.randint(-30, 30))
-            position = edge[1](random.uniform(0, 1))
-            kind = random.randint(1, ASTEROID_KINDS)
-            self.spawn(ASTEROID_MIN_RADIUS * kind, position, velocity)
 
+            position = edge[1](random.uniform(0, 1))
+
+            self.spawn(ASTEROID_MAX_RADIUS, position, velocity)
+
+    def update(self, dt: float) -> None:
+        if len(self.asteroid_group) > 0:
+            self.wave_timer = 0.0
+            return
+
+        self.wave_timer += dt
+
+        if self.wave_timer >= self.wave_delay:
+            self.wave_number += 1
+
+            self.spawn_wave()
+
+            log_event("wave_start", wave=self.wave_number, asteroid_count=self.wave_size, speed_multiplier=self.speed_multiplier)
+
+            self.wave_timer = 0.0
+
+            self.wave_size = min(self.wave_size + 2, 10)
+
+            self.speed_multiplier = min(self.speed_multiplier + 0.05, 10)
 
