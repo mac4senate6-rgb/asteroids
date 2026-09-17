@@ -6,11 +6,12 @@ from logger import log_event
 
 
 class Player(circleshape.CircleShape):
-    def __init__(self, x: float, y: float) -> None:
+    def __init__(self, x: float, y: float, shots: pygame.sprite.Group) -> None:
         circleshape.CircleShape.__init__(self, x, y, PLAYER_RADIUS)
         self.rotation = 0
         self.shoot_timer = 0.0
         self.thrusting = False
+        self.shots = shots
 
     def collides_with(self, other: circleshape.CircleShape) -> bool:
         distance = self.position.distance_to(other.position)
@@ -86,6 +87,9 @@ class Player(circleshape.CircleShape):
 
     def shoot(self) -> None:
         if self.shoot_timer > 0:
+            return
+
+        if len(self.shots) >= PLAYER_MAX_SHOTS:
             return
 
         self.shoot_timer = PLAYER_SHOOT_COOLDOWN_SECONDS

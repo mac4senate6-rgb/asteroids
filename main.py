@@ -30,7 +30,7 @@ def main():
     AsteroidField.containers = updatable
     Shot.containers = (shots, updatable, drawable)
 
-    player = Player(x=SCREEN_WIDTH / 2, y=SCREEN_HEIGHT / 2)
+    player = Player(x=SCREEN_WIDTH / 2, y=SCREEN_HEIGHT / 2, shots=shots)
     _asteroid_field = AsteroidField(asteroids)
 
     score = 0
@@ -58,6 +58,7 @@ def main():
                     player.velocity = pygame.Vector2(0, 0)
                     player.rotation = 0
                     log_event("player_respawn")
+
         for asteroid in asteroids:
             for shot in shots:
                 if asteroid.collides_with(shot):
@@ -70,6 +71,7 @@ def main():
                         score += 20
                     shot.kill()
                     asteroid.split()
+                    break
 
         screen.fill("black")
         score_surface = font.render(f"Score: {score}", True, (255, 255, 0))
