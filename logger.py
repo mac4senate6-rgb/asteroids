@@ -37,15 +37,15 @@ _start_time = datetime.now()
 def log_state():
     global _frame_count, _state_log_initialized
 
-    #If we have passed the maximum logging time return immediately.
-    if _frame_count > _FPS * _MAX_SECONDS:
-        return
-
     #Increase the frame counter by 1.
     _frame_count += 1
 
     #If this is NOT an exact 60-frame interval return immediately.
     if _frame_count % _FPS != 0:
+        return
+
+    # If we have passed the maximum logging time return immediately.
+    if _frame_count > _FPS * _MAX_SECONDS:
         return
 
     # Record the current time

@@ -45,11 +45,12 @@ def main():
         updatable.update(dt)
 
         for asteroid in asteroids:
-            if player.collides_with(asteroid):
-                log_event("player_hit")
+            if (player.invulnerability_timer <= 0 and player.collides_with(asteroid)):
+                log_event("player_hit", lives_before = lives, asteroid_radius = asteroid.radius)
                 lives -= 1
+
                 if lives <= 0:
-                    log_event("player_dead")
+                    log_event("player_dead", final_score = score)
                     print("Game over!")
                     sys.exit()
                 else:
@@ -57,12 +58,14 @@ def main():
                     player.position.y = SCREEN_HEIGHT / 2
                     player.velocity = pygame.Vector2(0, 0)
                     player.rotation = 0
-                    log_event("player_respawn")
+                    player.invulnerability_timer = PLAYER_RESPAWN_INVULNERABILITY_SECONDS
+                    log_event("player_respawn", lives_remaining = lives)
+                    break
 
         for asteroid in asteroids:
             for shot in shots:
                 if asteroid.collides_with(shot):
-                    log_event("asteroid_hit")
+                    log_event("asteroid_hit", asteroid_radius = asteroid.radius, score_before = score)
                     if asteroid.radius == ASTEROID_MIN_RADIUS:
                         score += 100
                     elif asteroid.radius == ASTEROID_MIN_RADIUS * 2:
