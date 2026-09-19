@@ -7,6 +7,8 @@ from asteroid import Asteroid
 from asteroidfield import AsteroidField
 from logger import log_event
 from shot import Shot
+from pathlib import Path
+
 
 def main():
     print(f"Starting Asteroids with pygame version: {pygame.version.ver}")
@@ -14,7 +16,11 @@ def main():
     print(f"Screen height: {SCREEN_HEIGHT}")
 
     pygame.init()
-    font = pygame.font.Font(None, 20)
+
+    base_dir = Path(__file__).resolve().parent
+    font_path = base_dir / "assets" / "fonts" / "Hyperspace.otf"
+    font = pygame.font.Font(font_path, 36)
+
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 
     clock = pygame.time.Clock()
@@ -77,14 +83,26 @@ def main():
                     break
 
         screen.fill("black")
-        score_surface = font.render(f"Score: {score}", True, (255, 255, 0))
-        screen.blit(score_surface, (20, 20))
+        score_surface = font.render(f"Score: {score:05d}", True, (255, 255, 255))
+        score_rect = score_surface.get_rect(topright=(SCREEN_WIDTH -40, 20))
+        screen.blit(score_surface, score_rect)
+
+        reserve_lives = lives - 1
+
+        for i in range(reserve_lives):
+            icon_position = pygame.Vector2(30 + i * 25, 55)
+            icon_forward = pygame.Vector2(0, -1)
+            icon_right = pygame.Vector2(1, 0) * 7
+            icon_nose = icon_position + icon_forward * 10
+            icon_rear_left = (icon_position - icon_forward * 10 - icon_right)
+            icon_rear_center = (icon_position - icon_forward * 4)
+            icon_rear_right = (icon_position - icon_forward * 10 + icon_right)
+            pygame.draw.polygon(screen, (255, 255, 255), [icon_nose, icon_rear_left, icon_rear_center, icon_rear_right], LINE_WIDTH)
 
         for sprite in drawable:
             sprite.draw(screen)
 
         pygame.display.flip()
-
         dt = clock.tick(60) / 1000
 
 
