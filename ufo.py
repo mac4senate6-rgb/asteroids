@@ -5,8 +5,12 @@ import random
 from ufo_shot import UFOShot
 
 class UFO(CircleShape):
-    def __init__(self, x: float, y: float) -> None:
-        CircleShape.__init__(self, x, y, UFO_RADIUS)
+    def __init__(self, x: float, y: float, radius: float, ufo_sound: pygame.mixer.Sound, ufo_channel: pygame.mixer.Channel) -> None:
+        super().__init__(x, y, radius)
+
+        self.ufo_sound = ufo_sound
+        self.ufo_channel = ufo_channel
+        self.ufo_channel.play(self.ufo_sound, loops=-1)
 
         self.shoot_timer = random.uniform(UFO_SHOOT_INTERVAL_MIN_SECONDS, UFO_SHOOT_INTERVAL_MAX_SECONDS)
 
@@ -38,6 +42,10 @@ class UFO(CircleShape):
         self.scale = self.radius / 20
 
         self.direction_change_timer = random.uniform(UFO_DIRECTION_CHANGE_MIN_SECONDS, UFO_DIRECTION_CHANGE_MAX_SECONDS)
+
+    def kill(self) -> None:
+        self.ufo_channel.stop()
+        super().kill()
 
     def draw(self, screen: pygame.Surface) -> None:
         glow = (120, 120, 120)
@@ -90,3 +98,11 @@ class UFO(CircleShape):
             self.kill()
 
 
+class LargeUFO(UFO):
+    def __init__(self, x: float, y: float, ufo_sound: pygame.mixer.Sound, ufo_channel: pygame.mixer.Channel) -> None:
+        super().__init__(x, y, UFO_LARGE_RADIUS, ufo_sound, ufo_channel)
+
+
+class SmallUFO(UFO):
+    def __init__(self, x: float, y: float, ufo_sound: pygame.mixer.Sound, ufo_channel: pygame.mixer.Channel) -> None:
+        super().__init__(x, y, UFO_SMALL_RADIUS, ufo_sound, ufo_channel)

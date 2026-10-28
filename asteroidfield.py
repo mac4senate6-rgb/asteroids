@@ -75,14 +75,9 @@ class AsteroidField(pygame.sprite.Sprite):
 
         if self.wave_timer >= self.wave_delay:
             self.wave_number += 1
-
             self.spawn_wave()
-
             log_event("wave_start", wave=self.wave_number, asteroid_count=self.wave_size, speed_multiplier=self.speed_multiplier)
-
             self.wave_timer = 0.0
-
             self.wave_size = min(self.wave_size + 2, 10)
-
             self.speed_multiplier = min(self.speed_multiplier + 0.05, 10)
 
