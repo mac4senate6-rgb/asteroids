@@ -4,9 +4,17 @@ from constants import *
 
 
 class UFOShot(CircleShape):
-    def __init__(self, x: float, y: float) -> None:
-        super().__init__(x, y, UFO_SHOT_RADIUS)
-        self.lifetime = UFO_SHOT_LIFETIME_SECONDS
+    def __init__(
+            self,
+            x: float,
+            y: float,
+            groups: tuple[pygame.sprite.Group, ...] | None = None,
+            lifetime: float | None = None,
+    ) -> None:
+
+        super().__init__(x, y, UFO_SHOT_RADIUS, groups=groups)
+
+        self.lifetime = (UFO_SHOT_LIFETIME_SECONDS if lifetime is None else lifetime)
 
     def draw(self, screen: pygame.Surface) -> None:
         pygame.draw.circle(screen, (255, 255, 255), self.position, self.radius)

@@ -4,9 +4,14 @@ import pygame
 
 class CircleShape(pygame.sprite.Sprite):
     containers: tuple[pygame.sprite.Group, ...]
-    def __init__(self, x: float, y: float, radius: float) -> None:
-        #to be used later
-        if hasattr(self, "containers"):
+    def __init__(self, x: float, y: float, radius: float, groups: tuple[pygame.sprite.Group, ...] | None=None) -> None:
+
+        self.sprite_groups = groups
+
+        if groups is not None:
+            super().__init__(*groups)
+
+        elif hasattr(self, "containers"):
             super().__init__(*self.containers)
         else:
             super().__init__()

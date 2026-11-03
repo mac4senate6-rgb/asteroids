@@ -12,17 +12,15 @@ import ufo
 import random
 from ufo_shot import UFOShot
 import audio
-
+import vector_text
+from attract.controller import AttractController
+from attract.simulation import AttractSimulation
 
 def main():
-    print(f"Starting Asteroids with pygame version: {pygame.version.ver}")
-    print(f"Screen width: {SCREEN_WIDTH}")
-    print(f"Screen height: {SCREEN_HEIGHT}")
-
     pygame.init()
     audio.initialize_audio()
     audio.build_test_sounds()
-    pygame.display.set_caption("Asteroids")
+    #pygame.display.set_caption("Asteroids")
 
     pygame.mixer.set_num_channels(9)
     pygame.mixer.set_reserved(2)
@@ -51,15 +49,23 @@ def main():
     heartbeat_on_timer = 0
     heartbeat_wave_number = 0
 
-
     base_dir = Path(__file__).resolve().parent
     font_path = base_dir / "assets" / "fonts" / "Hyperspace.otf"
+
     font = pygame.font.Font(font_path, 36)
+    title_font = pygame.font.Font(font_path, 48)
+    small_font = pygame.font.Font(font_path, 12)
 
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 
     clock = pygame.time.Clock()
     dt = 0.0
+    game_state = "ATTRACT"
+    attract_start_time = pygame.time.get_ticks()
+    attract_controller = AttractController(attract_start_time)
+    attract_display = attract_controller.current_display(attract_start_time)
+    attract_simulation = AttractSimulation(large_ufo_sound, small_ufo_sound, ufo_channel)
+
 
     updatable = pygame.sprite.Group()
     drawable = pygame.sprite.Group()
@@ -138,9 +144,55 @@ def main():
 
     while True:
         log_state()
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return
+
+            elif event.type == pygame.KEYDOWN:
+                if game_state == "ATTRACT" and event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                    attract_simulation.cleanup()
+                    game_state = "PLAYING"
+
+        if game_state == "ATTRACT":
+
+            current_display = attract_controller.current_display(pygame.time.get_ticks())
+
+            if current_display != attract_display:
+                attract_display = current_display
+
+            screen.fill((0, 0, 0))
+            attract_simulation.update(dt)
+            attract_simulation.draw(screen)
+
+            if current_display == "DEMO":
+                vector_text.draw_vector_title(screen, "ASTEROIDS", SCREEN_WIDTH // 2, SCREEN_HEIGHT // 3)
+
+            else:
+                heading_surface = title_font.render("HIGH SCORES", True,(255, 255, 255))  # Create the heading using our existing font.
+                heading_rect = heading_surface.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 3))  # Center the heading.
+                screen.blit(heading_surface, heading_rect)
+
+                placeholder_surface = small_font.render("HIGH SCORE TABLE COMING SOON", True, (255, 255, 255))
+                placeholder_rect = placeholder_surface.get_rect(center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
+                screen.blit(placeholder_surface, placeholder_rect)
+
+            elapsed_time = pygame.time.get_ticks() - attract_start_time
+            show_prompt = (elapsed_time // 500) % 2 == 0
+
+            if show_prompt:
+                prompt_surface = small_font.render("PRESS ENTER OR SPACE", True, (255, 255, 255))
+                prompt_rect = prompt_surface.get_rect(center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT * 2 // 3))
+                screen.blit(prompt_surface, prompt_rect)
+
+            copyright_surface = small_font.render("© 1979 ATARI INC.", True, (255, 255, 255))
+            copyright_rect = copyright_surface.get_rect(center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT - 40))
+            screen.blit(copyright_surface, copyright_rect)
+
+            pygame.display.flip()
+            dt = clock.tick(60) / 1000
+            continue
+
         updatable.update(dt)
 
         if asteroid_field.wave_number != heartbeat_wave_number:
@@ -198,10 +250,10 @@ def main():
                 spawn_y = random.uniform(spawn_radius, SCREEN_HEIGHT - spawn_radius)
 
                 if spawn_from_left:
-                    new_ufo = ufo_class(-spawn_radius, spawn_y, ufo_sound, ufo_channel)
+                    new_ufo = ufo_class(-spawn_radius, spawn_y, ufo_sound, ufo_channel, targeting=player)
                     new_ufo.velocity = pygame.Vector2(UFO_SPEED, 0)
                 else:
-                    new_ufo = ufo_class(SCREEN_WIDTH + spawn_radius, spawn_y, ufo_sound, ufo_channel)
+                    new_ufo = ufo_class(SCREEN_WIDTH + spawn_radius, spawn_y, ufo_sound, ufo_channel, targeting=player)
                     new_ufo.velocity = pygame.Vector2(-UFO_SPEED, 0)
 
                 ufo_spawn_timer = UFO_SPAWN_INTERVAL
@@ -228,7 +280,7 @@ def main():
 
         for asteroid in asteroids:
             for shot in list(shots):
-                if asteroid.collides_with(shot):
+                if asteroid.collides_projectile(shot):
                     log_event("asteroid_hit", asteroid_radius = asteroid.radius, score_before = score)
                     if asteroid.radius == ASTEROID_MIN_RADIUS:
                         score += 100

@@ -1,6 +1,5 @@
 import random
-#use it to randomly choose which edge an asteroid enters from, its speed,
-# its slight angle, its starting position along that edge, and its size.
+#use it to randomly choose which edge an asteroid enters from, its speed, etc.
 from collections.abc import Callable
 #use this only for a type hint. It describes a function that can be stored inside another data structure
 
@@ -38,18 +37,30 @@ class AsteroidField(pygame.sprite.Sprite):
         ),
     ]
 
-    def __init__(self, asteroid_group: pygame.sprite.Group) -> None:
-        pygame.sprite.Sprite.__init__(self, self.containers)
-        self.asteroid_group = asteroid_group
-        self.wave_size = 4
-        self.wave_timer = 0.0
-        self.wave_delay = 2.0
-        self.speed_multiplier = 1.0
-        self.wave_number = 0
+    def __init__(
+            self,
+            asteroid_group: pygame.sprite.Group,
+            groups: tuple[pygame.sprite.Group, ...] | None = None,
+            asteroid_groups: tuple[pygame.sprite.Group, ...] | None = None,
+            log_events: bool = True,
+    ) -> None:
+        if groups is not None:  # Check whether explicit groups were provided.
+            pygame.sprite.Sprite.__init__(self, *groups)  # Register the field with the supplied groups.
+        else:  # Otherwise, use the existing gameplay containers.
+            pygame.sprite.Sprite.__init__(self, self.containers)  # Preserve normal gameplay registration.
 
+        self.asteroid_group = asteroid_group  # Store the asteroid group monitored for wave progression.
+        self.asteroid_groups = asteroid_groups  # Store the registration groups for newly spawned asteroids.
+        self.log_events = log_events  # Store whether gameplay events should be recorded.
+
+        self.wave_size = 4  # Set the initial asteroid count.
+        self.wave_timer = 0.0  # Initialize the wave timer.
+        self.wave_delay = 2.0  # Set the delay between waves.
+        self.speed_multiplier = 1.0  # Initialize the speed multiplier.
+        self.wave_number = 0  # Initialize the wave counter.
 
     def spawn(self, radius: float, position: pygame.Vector2, velocity: pygame.Vector2) -> None:
-        asteroid = Asteroid(position.x, position.y, radius)
+        asteroid = Asteroid(position.x, position.y, radius, groups=self.asteroid_groups, log_events=self.log_events)
         asteroid.velocity = velocity
 
     def spawn_wave(self) -> None:
@@ -76,7 +87,10 @@ class AsteroidField(pygame.sprite.Sprite):
         if self.wave_timer >= self.wave_delay:
             self.wave_number += 1
             self.spawn_wave()
-            log_event("wave_start", wave=self.wave_number, asteroid_count=self.wave_size, speed_multiplier=self.speed_multiplier)
+
+            if self.log_events:
+                log_event("wave_start", wave=self.wave_number, asteroid_count=self.wave_size, speed_multiplier=self.speed_multiplier)
+
             self.wave_timer = 0.0
             self.wave_size = min(self.wave_size + 2, 10)
             self.speed_multiplier = min(self.speed_multiplier + 0.05, 10)

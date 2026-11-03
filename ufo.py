@@ -5,9 +5,23 @@ import random
 from ufo_shot import UFOShot
 
 class UFO(CircleShape):
-    def __init__(self, x: float, y: float, radius: float, ufo_sound: pygame.mixer.Sound, ufo_channel: pygame.mixer.Channel) -> None:
-        super().__init__(x, y, radius)
+    def __init__(
+            self, x: float, y: float, radius: float,
+            ufo_sound: pygame.mixer.Sound,
+            ufo_channel: pygame.mixer.Channel,
+            groups: tuple[pygame.sprite.Group, ...] | None = None,
+            shot_groups: tuple[pygame.sprite.Group, ...] | None = None,
+            shot_speed: float | None = None,
+            shot_lifetime: float | None = None,
+            targeting: CircleShape | None = None
+            ) -> None:
 
+        super().__init__(x, y, radius, groups=groups)
+
+        self.shot_groups = shot_groups
+        self.targeting = targeting
+        self.shot_speed = UFO_SHOT_SPEED if shot_speed is None else shot_speed
+        self.shot_lifetime = UFO_SHOT_LIFETIME_SECONDS if shot_lifetime is None else shot_lifetime
         self.ufo_sound = ufo_sound
         self.ufo_channel = ufo_channel
         self.ufo_channel.play(self.ufo_sound, loops=-1)
@@ -43,6 +57,25 @@ class UFO(CircleShape):
 
         self.direction_change_timer = random.uniform(UFO_DIRECTION_CHANGE_MIN_SECONDS, UFO_DIRECTION_CHANGE_MAX_SECONDS)
 
+    def shoot(self) -> None:
+        shot = UFOShot(
+            self.position.x,
+            self.position.y,
+            groups=self.shot_groups,
+            lifetime=self.shot_lifetime
+        )
+        if isinstance(self, SmallUFO) and self.targeting is not None:
+            aim_vector = self.targeting.position - self.position
+
+            if aim_vector.length_squared() > 0:
+                shot_direction = aim_vector.normalize().rotate(random.uniform(-10, 10))
+            else:
+                shot_direction = pygame.Vector2(0, 1).rotate(random.uniform(0.0, 360.0))
+        else:
+            shot_direction = pygame.Vector2(0, 1).rotate(random.uniform(0.0, 360.0))
+
+        shot.velocity = shot_direction * self.shot_speed
+
     def kill(self) -> None:
         self.ufo_channel.stop()
         super().kill()
@@ -63,12 +96,6 @@ class UFO(CircleShape):
 
             pygame.draw.aaline(screen, glow, start_pos, end_pos)
             pygame.draw.line(screen, white, start_pos, end_pos, LINE_WIDTH)
-
-    def shoot(self) -> None:
-        shot = UFOShot(self.position.x, self.position.y)
-        shot_direction = pygame.Vector2(0, 1).rotate(random.uniform(0, 360))
-
-        shot.velocity = shot_direction * UFO_SHOT_SPEED
 
     def update(self, dt: float) -> None:
         self.position += self.velocity * dt
@@ -99,10 +126,38 @@ class UFO(CircleShape):
 
 
 class LargeUFO(UFO):
-    def __init__(self, x: float, y: float, ufo_sound: pygame.mixer.Sound, ufo_channel: pygame.mixer.Channel) -> None:
-        super().__init__(x, y, UFO_LARGE_RADIUS, ufo_sound, ufo_channel)
+    def __init__(
+            self,
+            x: float,
+            y: float,
+            ufo_sound: pygame.mixer.Sound,
+            ufo_channel: pygame.mixer.Channel,
+            groups: tuple[pygame.sprite.Group, ...] | None = None,
+            shot_groups: tuple[pygame.sprite.Group, ...] | None = None,
+            shot_speed: float | None = None,
+            shot_lifetime: float | None = None,
+            targeting: CircleShape | None = None,
+    ) -> None:
+
+        super().__init__(x, y, UFO_LARGE_RADIUS, ufo_sound,
+                         ufo_channel, groups=groups, shot_groups=shot_groups,
+                         shot_speed=shot_speed, shot_lifetime=shot_lifetime,
+                         targeting=targeting,
+                         )
 
 
 class SmallUFO(UFO):
-    def __init__(self, x: float, y: float, ufo_sound: pygame.mixer.Sound, ufo_channel: pygame.mixer.Channel) -> None:
-        super().__init__(x, y, UFO_SMALL_RADIUS, ufo_sound, ufo_channel)
+    def __init__(
+            self, x: float, y: float, ufo_sound: pygame.mixer.Sound,
+            ufo_channel: pygame.mixer.Channel, groups: tuple[pygame.sprite.Group, ...] | None = None,
+            shot_groups: tuple[pygame.sprite.Group, ...] | None = None,
+            shot_speed: float | None = None,
+            shot_lifetime: float | None = None,
+            targeting: CircleShape | None = None,
+    ) -> None:
+
+        super().__init__(x, y, UFO_SMALL_RADIUS, ufo_sound,
+                         ufo_channel, groups=groups, shot_groups=shot_groups,
+                         shot_speed=shot_speed, shot_lifetime=shot_lifetime,
+                         targeting=targeting
+                         )
