@@ -15,6 +15,7 @@ import audio
 import vector_text
 from attract.controller import AttractController
 from attract.simulation import AttractSimulation
+from ship_explosion import ShipExplosion
 
 def main():
     pygame.init()
@@ -95,6 +96,7 @@ def main():
     score = 0
     lives = PLAYER_STARTING_LIVES
     next_bonus_score = PLAYER_BONUS_LIFE_SCORE
+    ship_explosion: ShipExplosion | None = None
 
     def play_asteroid_boom(asteroid_type: float) -> None:  # Accept the asteroid's radius.
         if asteroid_type == ASTEROID_MIN_RADIUS:  # Check for a small asteroid.
@@ -111,28 +113,27 @@ def main():
             large_explosion_sound.play()  # Play the large UFO's explosion.
 
     def handle_player_hit(source: str, asteroid_radius: float | None = None) -> None:
-        nonlocal lives
+        nonlocal lives, ship_explosion
 
         if source == "asteroid":
             log_event("player_hit", lives_before=lives, source=source, asteroid_radius = asteroid_radius)
         else:
             log_event("player_hit", lives_before=lives, source=source)
 
+
         lives -= 1
         heartbeat_channel.stop()
         small_explosion_sound.play()
 
-        if lives == 0:
-            log_event("player_dead", final_score=score, source=source)
-            print("Game over, man...Game over!")
-            sys.exit()
-
-        player.position.x = SCREEN_WIDTH / 2
-        player.position.y = SCREEN_HEIGHT / 2
+        player.destroyed = True
         player.velocity = pygame.Vector2(0, 0)
-        player.rotation = 0
-        player.invulnerability_timer = PLAYER_RESPAWN_INVULNERABILITY_SECONDS
-        log_event("player_respawn",lives_remaining=lives,source=source)
+        player.thrusting = False
+
+        if player.thrust_channel is not None:
+            player.thrust_channel.stop()
+            player.thrust_channel = None
+
+        ship_explosion = ShipExplosion(player.position)
 
     def check_bonus_lives() -> None:
         nonlocal lives, next_bonus_score
@@ -195,6 +196,25 @@ def main():
 
         updatable.update(dt)
 
+        if ship_explosion is not None:
+            ship_explosion.update(dt)
+
+            if ship_explosion.is_finished:
+                ship_explosion = None
+
+                if lives <= 0:
+                    log_event("player_dead", final_score=score, source="ship_explosion")
+                    print("Game over, man...Game over!")
+                    sys.exit()
+
+                player.position = pygame.Vector2(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
+                player.velocity = pygame.Vector2(0, 0)
+                player.rotation = 0
+                player.invulnerability_timer = PLAYER_RESPAWN_INVULNERABILITY_SECONDS
+                player.destroyed = False
+
+                log_event("player_respawn", lives_remaining=lives, source="ship_explosion")
+
         if asteroid_field.wave_number != heartbeat_wave_number:
             heartbeat_wave_number = asteroid_field.wave_number
             heartbeat_off_reload = 48
@@ -210,6 +230,8 @@ def main():
             heartbeat_on_timer = 0
             heartbeat_off_timer = 4
             heartbeat_frame_accumulator = 0.0
+        elif player.destroyed:
+            heartbeat_channel.stop()
         else:
             heartbeat_frame_accumulator += dt
 
@@ -237,7 +259,7 @@ def main():
                         heartbeat_on_timer = 4
 
 
-        if len(ufos) == 0:
+        if not player.destroyed and len(ufos) == 0:
             ufo_spawn_timer = max(0.0, ufo_spawn_timer - dt)
 
             if ufo_spawn_timer <= int(0):
@@ -259,18 +281,19 @@ def main():
                 ufo_spawn_timer = UFO_SPAWN_INTERVAL
 
         for asteroid in asteroids:
-            if player.invulnerability_timer <= 0 and player.collides_with(asteroid):
+            if not player.destroyed and player.invulnerability_timer <= 0 and player.collides_with(
+                    asteroid):  # Ignore asteroid collisions while the ship is destroyed.
                 handle_player_hit("asteroid", asteroid.radius)
                 break
 
-        if player.invulnerability_timer <= 0:
+        if not player.destroyed and player.invulnerability_timer <= 0:
             for ufo_shot in ufo_shots:
                 if player.collides_with(ufo_shot):
                     ufo_shot.kill()
                     handle_player_hit("ufo_shot")
                     break
 
-        if player.invulnerability_timer <= 0:
+        if not player.destroyed and player.invulnerability_timer <= 0:
             for enemy_ufo in ufos:
                 if player.collides_with(enemy_ufo):
                     play_ufo_boom(enemy_ufo)
@@ -322,7 +345,7 @@ def main():
         score_rect = score_surface.get_rect(topright=(SCREEN_WIDTH - 40, 20))
         screen.blit(score_surface, score_rect)
 
-        reserve_lives = lives - 1
+        reserve_lives = max(0, lives - 1) # Display zero reserve ships when the player has no remaining lives.
 
         for i in range(reserve_lives):
             icon_position = pygame.Vector2(30 + i * 16, 55)
@@ -341,6 +364,8 @@ def main():
 
         for sprite in drawable:
             sprite.draw(screen)
+        if ship_explosion is not None:
+            ship_explosion.draw(screen)
 
         pygame.display.flip()
         dt = clock.tick(60) / 1000

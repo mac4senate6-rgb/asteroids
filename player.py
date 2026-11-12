@@ -14,6 +14,7 @@ class Player(circleshape.CircleShape):
         self.thrusting = False # The spacecraft begins without thrust.
         self.thrust_animation_time = 0.0 # Tracks elapsed time for the flashing exhaust.
         self.invulnerability_timer = 0.0
+        self.destroyed = False
 
         self.shots = shots
         self.shot_sound = shot_sound
@@ -77,6 +78,8 @@ class Player(circleshape.CircleShape):
 
 
     def draw(self, screen: pygame.Surface) -> None:
+        if self.destroyed:
+            return
         if self.invulnerability_timer > 0:
             blink = int(self.invulnerability_timer / PLAYER_BLINK_INTERVAL_SECONDS)
             if blink % 2:
@@ -107,6 +110,14 @@ class Player(circleshape.CircleShape):
         self.rotation += PLAYER_TURN_SPEED * dt
 
     def update(self, dt: float) -> None:
+        if self.destroyed:
+            self.thrusting = False
+
+            if self.thrust_channel is not None:
+                self.thrust_channel.stop()
+                self.thrust_channel = None
+            return
+
         keys = pygame.key.get_pressed()  # Read the keyboard.
         self.thrusting = keys[pygame.K_w]  # Determine whether thrust is active.
         self.thrust_animation_time += dt  # Advance the animation clock.
@@ -157,6 +168,8 @@ class Player(circleshape.CircleShape):
         self.velocity.y = max(-PLAYER_MAX_SPEED, min(self.velocity.y, PLAYER_MAX_SPEED))
 
     def shoot(self) -> None:
+        if self.destroyed:
+            return
         if self.shoot_timer > 0:
             return
 
